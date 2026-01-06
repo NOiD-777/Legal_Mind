@@ -122,6 +122,8 @@ def main():
                     st.caption("✅ OpenAI")
                 if os.getenv("ANTHROPIC_API_KEY"):
                     st.caption("✅ Anthropic Claude")
+                if os.getenv("GROQ_API_KEY"):
+                    st.caption("✅ Groq")
                 
                 # Analysis options
                 st.divider()

@@ -6,6 +6,7 @@ import google.generativeai as genai
 import streamlit as st
 from openai import OpenAI
 from anthropic import Anthropic
+from groq import Groq
 
 class LegalAnalyzer:
     """Performs AI-powered legal document analysis using multiple AI models"""
@@ -18,6 +19,8 @@ class LegalAnalyzer:
         "gpt-4o-mini": {"provider": "openai", "name": "GPT-4o Mini", "cost": "low"},
         "claude-3-5-sonnet-20241022": {"provider": "anthropic", "name": "Claude 3.5 Sonnet", "cost": "medium"},
         "claude-3-5-haiku-20241022": {"provider": "anthropic", "name": "Claude 3.5 Haiku", "cost": "low"},
+        "mixtral-8x7b-32768": {"provider": "groq", "name": "Mixtral 8x7B", "cost": "free"},
+        "llama-3.1-70b-versatile": {"provider": "groq", "name": "Llama 3.1 70B", "cost": "free"},
     }
     
     def __init__(self, model_name: str = "gemini-2.0-flash-lite"):
@@ -69,6 +72,11 @@ class LegalAnalyzer:
         if anthropic_key:
             self.clients["anthropic"] = Anthropic(api_key=anthropic_key)
         
+        # Groq
+        groq_key = os.getenv("GROQ_API_KEY")
+        if groq_key:
+            self.clients["groq"] = Groq(api_key=groq_key)
+        
         # Check if required provider is available
         if self.provider not in self.clients:
             st.warning(f"API key not found for {self.provider}. Please add it to your .env file.")
@@ -84,6 +92,8 @@ class LegalAnalyzer:
             available.extend([k for k, v in cls.AVAILABLE_MODELS.items() if v["provider"] == "openai"])
         if os.getenv("ANTHROPIC_API_KEY"):
             available.extend([k for k, v in cls.AVAILABLE_MODELS.items() if v["provider"] == "anthropic"])
+        if os.getenv("GROQ_API_KEY"):
+            available.extend([k for k, v in cls.AVAILABLE_MODELS.items() if v["provider"] == "groq"])
         
         return available if available else ["gemini-2.0-flash-lite"]
     
@@ -229,6 +239,8 @@ Ensure all confidence scores are between 0.0 and 1.0, and the overall_risk_score
             return self._call_openai_analysis(prompt)
         elif self.provider == "anthropic":
             return self._call_anthropic_analysis(prompt)
+        elif self.provider == "groq":
+            return self._call_groq_analysis(prompt)
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
     
@@ -306,6 +318,35 @@ Ensure all confidence scores are between 0.0 and 1.0, and the overall_risk_score
             return self._validate_analysis_response(json.loads(response_text))
         except Exception as e:
             st.warning(f"Anthropic API error: {str(e)}")
+            return self._create_fallback_analysis()
+    
+    def _call_groq_analysis(self, prompt: str) -> Dict[str, Any]:
+        """Call Groq API"""
+        try:
+            client = self.clients.get("groq")
+            if not client:
+                raise ValueError("Groq client not initialized")
+            
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are an expert legal analyst. Respond only with valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,
+                max_tokens=2000
+            )
+            
+            self.performance_metrics["tokens_used"] = response.usage.total_tokens if hasattr(response, 'usage') else 0
+            
+            response_text = response.choices[0].message.content.strip()
+            if response_text.startswith('```json'):
+                response_text = response_text.replace('```json', '').replace('```', '').strip()
+            
+            return self._validate_analysis_response(json.loads(response_text))
+        except Exception as e:
+            st.warning(f"Groq API error: {str(e)}")
+            return self._create_fallback_analysis()
             return self._create_fallback_analysis()
     
     def _generate_executive_summary(self, text: str, analysis_result: Dict[str, Any]) -> Dict[str, Any]:
