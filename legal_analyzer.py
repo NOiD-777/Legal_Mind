@@ -4,22 +4,36 @@ import time
 from typing import List, Dict, Any, Optional
 import google.generativeai as genai
 import streamlit as st
+from openai import OpenAI
+from anthropic import Anthropic
 
 class LegalAnalyzer:
-    """Performs AI-powered legal document analysis using Google Gemini AI"""
+    """Performs AI-powered legal document analysis using multiple AI models"""
     
-    def __init__(self):
-        # Using Google's Gemini Flash model for better rate limits on free tier
-        self.model = "gemini-2.0-flash-lite"
+    # Available models configuration
+    AVAILABLE_MODELS = {
+        "gemini-2.0-flash-lite": {"provider": "google", "name": "Gemini 2.0 Flash", "cost": "free"},
+        "gemini-1.5-pro": {"provider": "google", "name": "Gemini 1.5 Pro", "cost": "low"},
+        "gpt-4o": {"provider": "openai", "name": "GPT-4o", "cost": "medium"},
+        "gpt-4o-mini": {"provider": "openai", "name": "GPT-4o Mini", "cost": "low"},
+        "claude-3-5-sonnet-20241022": {"provider": "anthropic", "name": "Claude 3.5 Sonnet", "cost": "medium"},
+        "claude-3-5-haiku-20241022": {"provider": "anthropic", "name": "Claude 3.5 Haiku", "cost": "low"},
+    }
+    
+    def __init__(self, model_name: str = "gemini-2.0-flash-lite"):
+        self.model = model_name
+        self.provider = self.AVAILABLE_MODELS.get(model_name, {}).get("provider", "google")
         
-        # Initialize Gemini client
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            st.error("Gemini API key not found. Please set the GEMINI_API_KEY environment variable.")
-            st.stop()
+        # Initialize appropriate client based on provider
+        self._initialize_clients()
         
-        genai.configure(api_key=api_key)
-        self.client = genai.GenerativeModel(self.model)
+        # Performance tracking
+        self.performance_metrics = {
+            "response_time": 0,
+            "tokens_used": 0,
+            "issues_found": 0,
+            "confidence_avg": 0
+        }
         
         # Legal categories for issue classification
         self.legal_categories = [
@@ -35,6 +49,44 @@ class LegalAnalyzer:
             "Risk Management"
         ]
     
+    def _initialize_clients(self):
+        """Initialize API clients for all available providers"""
+        self.clients = {}
+        
+        # Google Gemini
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if gemini_key:
+            genai.configure(api_key=gemini_key)
+            self.clients["google"] = genai
+        
+        # OpenAI
+        openai_key = os.getenv("OPENAI_API_KEY")
+        if openai_key:
+            self.clients["openai"] = OpenAI(api_key=openai_key)
+        
+        # Anthropic Claude
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        if anthropic_key:
+            self.clients["anthropic"] = Anthropic(api_key=anthropic_key)
+        
+        # Check if required provider is available
+        if self.provider not in self.clients:
+            st.warning(f"API key not found for {self.provider}. Please add it to your .env file.")
+    
+    @classmethod
+    def get_available_models(cls) -> List[str]:
+        """Get list of models that have API keys configured"""
+        available = []
+        
+        if os.getenv("GEMINI_API_KEY"):
+            available.extend([k for k, v in cls.AVAILABLE_MODELS.items() if v["provider"] == "google"])
+        if os.getenv("OPENAI_API_KEY"):
+            available.extend([k for k, v in cls.AVAILABLE_MODELS.items() if v["provider"] == "openai"])
+        if os.getenv("ANTHROPIC_API_KEY"):
+            available.extend([k for k, v in cls.AVAILABLE_MODELS.items() if v["provider"] == "anthropic"])
+        
+        return available if available else ["gemini-2.0-flash-lite"]
+    
     def analyze_document(self, text: str, analysis_depth: str, focus_areas: List[str], filename: str) -> Dict[str, Any]:
         """
         Analyze a legal document for potential issues and risks
@@ -49,14 +101,25 @@ class LegalAnalyzer:
             Dictionary containing analysis results
         """
         try:
+            start_time = time.time()
+            
             # Generate analysis prompt based on parameters
             prompt = self._create_analysis_prompt(text, analysis_depth, focus_areas)
             
-            # Perform the analysis
-            analysis_response = self._call_gemini_analysis(prompt)
+            # Perform the analysis using selected model
+            analysis_response = self._call_ai_analysis(prompt)
             
             # Generate executive summary
             summary_response = self._generate_executive_summary(text, analysis_response)
+            
+            # Calculate performance metrics
+            self.performance_metrics["response_time"] = time.time() - start_time
+            self.performance_metrics["issues_found"] = len(analysis_response.get('issues', []))
+            
+            # Calculate average confidence
+            issues = analysis_response.get('issues', [])
+            if issues:
+                self.performance_metrics["confidence_avg"] = sum(i.get('confidence', 0) for i in issues) / len(issues)
             
             # Combine results
             results = {
@@ -69,20 +132,23 @@ class LegalAnalyzer:
                     'analysis_depth': analysis_depth,
                     'focus_areas': focus_areas,
                     'document_length': len(text),
-                    'model_used': self.model
-                }
+                    'model_used': self.model,
+                    'provider': self.provider,
+                    'response_time': self.performance_metrics["response_time"],
+                    'timestamp': time.time()
+                },
+                'performance_metrics': self.performance_metrics
             }
             
             return results
             
         except Exception as e:
-            st.error(f"Error during legal analysis: {str(e)}")
+            st.error(f"Error during legal analysis with {self.model}: {str(e)}")
             raise
     
     def _create_analysis_prompt(self, text: str, analysis_depth: str, focus_areas: List[str]) -> str:
         """Create a structured prompt for legal document analysis"""
         
-        # Base prompt
         base_prompt = f"""
 You are an expert legal analyst tasked with analyzing a legal document for potential issues, risks, and areas of concern. 
 
@@ -100,11 +166,9 @@ Analysis Requirements:
 Analysis Depth: {analysis_depth}
 """
         
-        # Add focus areas if specified
         if focus_areas:
             base_prompt += f"\nFocus Areas: Pay special attention to issues related to: {', '.join(focus_areas)}\n"
         
-        # Depth-specific instructions
         if analysis_depth == "Comprehensive":
             base_prompt += """
 Provide a thorough analysis including:
@@ -128,7 +192,6 @@ Provide targeted analysis on:
 - Industry-specific compliance requirements
 """
         
-        # JSON format requirements
         base_prompt += """
 
 Respond with a JSON object in the following format:
@@ -137,7 +200,7 @@ Respond with a JSON object in the following format:
         {
             "title": "Brief descriptive title of the issue",
             "description": "Detailed description of the legal issue or concern",
-            "category": "Primary legal category (Contract Terms, Compliance, Liability, etc.)",
+            "category": "Primary legal category",
             "risk_level": "High/Medium/Low",
             "confidence": 0.85,
             "potential_impact": "Description of potential consequences",
@@ -157,145 +220,155 @@ Ensure all confidence scores are between 0.0 and 1.0, and the overall_risk_score
         
         return base_prompt
     
+    def _call_ai_analysis(self, prompt: str) -> Dict[str, Any]:
+        """Make API call to selected AI model for document analysis"""
+        
+        if self.provider == "google":
+            return self._call_gemini_analysis(prompt)
+        elif self.provider == "openai":
+            return self._call_openai_analysis(prompt)
+        elif self.provider == "anthropic":
+            return self._call_anthropic_analysis(prompt)
+        else:
+            raise ValueError(f"Unsupported provider: {self.provider}")
+    
     def _call_gemini_analysis(self, prompt: str) -> Dict[str, Any]:
-        """Make API call to Gemini for document analysis with retry logic"""
-        
-        max_retries = 3
-        base_delay = 60  # Start with 60 seconds for rate limit errors
-        
-        for attempt in range(max_retries):
-            try:
-                # Create a more concise prompt to reduce token usage
-                full_prompt = f"""You are a senior legal analyst. Analyze this legal document and identify potential issues.
-
-{prompt}
-
-Important: Respond with valid JSON only. Keep analysis concise but thorough."""
-
-                response = self.client.generate_content(
-                    full_prompt,
-                    generation_config={
-                        'temperature': 0.1,
-                        'max_output_tokens': 2000,  # Reduced to stay within limits
-                    }
-                )
-                
-                # Extract text from response
-                response_text = response.text
-                
-                # Clean the response to ensure it's valid JSON
-                if response_text.startswith('```json'):
-                    response_text = response_text.replace('```json', '').replace('```', '')
-                response_text = response_text.strip()
-                
-                # Parse the JSON response
-                analysis_result = json.loads(response_text)
-                
-                # Validate and clean the response
-                return self._validate_analysis_response(analysis_result)
-                
-            except Exception as e:
-                error_str = str(e)
-                
-                # Check if it's a rate limit error
-                if "429" in error_str or "quota" in error_str.lower():
-                    if attempt < max_retries - 1:
-                        delay = base_delay * (2 ** attempt)  # Exponential backoff
-                        st.warning(f"Rate limit reached. Waiting {delay} seconds before retry {attempt + 1}/{max_retries}...")
-                        time.sleep(delay)
-                        continue
-                    else:
-                        # Return a simplified mock analysis for demonstration
-                        return self._create_fallback_analysis()
-                
-                # For other errors, check if it's JSON parsing
-                elif "json" in error_str.lower():
-                    if attempt < max_retries - 1:
-                        st.warning(f"Parsing error on attempt {attempt + 1}. Retrying...")
-                        time.sleep(5)
-                        continue
-                    else:
-                        return self._create_fallback_analysis()
-                else:
-                    raise Exception(f"Gemini API error: {error_str}")
-        
-        # If all retries failed, return fallback
-        return self._create_fallback_analysis()
+        """Call Google Gemini API"""
+        try:
+            client = genai.GenerativeModel(self.model)
+            response = client.generate_content(
+                prompt,
+                generation_config={'temperature': 0.1, 'max_output_tokens': 2000}
+            )
+            
+            if hasattr(response, 'usage_metadata'):
+                self.performance_metrics["tokens_used"] = getattr(response.usage_metadata, 'total_token_count', 0)
+            
+            response_text = response.text.strip()
+            if response_text.startswith('```json'):
+                response_text = response_text.replace('```json', '').replace('```', '').strip()
+            
+            return self._validate_analysis_response(json.loads(response_text))
+        except Exception as e:
+            st.warning(f"Gemini API error: {str(e)}")
+            return self._create_fallback_analysis()
+    
+    def _call_openai_analysis(self, prompt: str) -> Dict[str, Any]:
+        """Call OpenAI GPT API"""
+        try:
+            client = self.clients.get("openai")
+            if not client:
+                raise ValueError("OpenAI client not initialized")
+            
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are an expert legal analyst. Respond only with valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,
+                max_tokens=2000
+            )
+            
+            self.performance_metrics["tokens_used"] = response.usage.total_tokens
+            
+            response_text = response.choices[0].message.content.strip()
+            if response_text.startswith('```json'):
+                response_text = response_text.replace('```json', '').replace('```', '').strip()
+            
+            return self._validate_analysis_response(json.loads(response_text))
+        except Exception as e:
+            st.warning(f"OpenAI API error: {str(e)}")
+            return self._create_fallback_analysis()
+    
+    def _call_anthropic_analysis(self, prompt: str) -> Dict[str, Any]:
+        """Call Anthropic Claude API"""
+        try:
+            client = self.clients.get("anthropic")
+            if not client:
+                raise ValueError("Anthropic client not initialized")
+            
+            response = client.messages.create(
+                model=self.model,
+                max_tokens=2000,
+                temperature=0.1,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            
+            self.performance_metrics["tokens_used"] = response.usage.input_tokens + response.usage.output_tokens
+            
+            response_text = response.content[0].text.strip()
+            if response_text.startswith('```json'):
+                response_text = response_text.replace('```json', '').replace('```', '').strip()
+            
+            return self._validate_analysis_response(json.loads(response_text))
+        except Exception as e:
+            st.warning(f"Anthropic API error: {str(e)}")
+            return self._create_fallback_analysis()
     
     def _generate_executive_summary(self, text: str, analysis_result: Dict[str, Any]) -> Dict[str, Any]:
         """Generate an executive summary of the analysis"""
         
-        summary_prompt = f"""
-Based on the following legal document analysis, create an executive summary suitable for legal professionals and decision-makers.
-
-Analysis Results:
-{json.dumps(analysis_result, indent=2)}
-
-Document Length: {len(text)} characters
-Issues Found: {len(analysis_result.get('issues', []))}
-
-Provide a JSON response with:
-{{
-    "executive_summary": "2-3 paragraph executive summary highlighting key findings, overall risk assessment, and critical areas requiring attention",
-    "key_findings": ["Top 5 most important findings as bullet points"],
-    "next_steps": ["5 specific recommended actions in order of priority"]
-}}
-"""
+        if analysis_result.get('document_type') == 'Rate Limited Analysis':
+            return {
+                "executive_summary": "Analysis could not be completed due to API limitations.",
+                "key_findings": ["API limitations encountered"],
+                "next_steps": ["Retry analysis", "Try shorter document"]
+            }
         
-        try:
-            # Skip executive summary if we're in rate limit mode
-            if analysis_result.get('document_type') == 'Rate Limited Analysis':
-                return {
-                    "executive_summary": "Analysis could not be completed due to API rate limits. The legal document analyzer is designed to identify potential issues in contracts and legal documents using AI. Please try again when rate limits reset or consider using a shorter document.",
-                    "key_findings": [
-                        "API rate limits reached on free tier",
-                        "System provides graceful error handling",
-                        "Demonstration mode active"
-                    ],
-                    "next_steps": [
-                        "Wait for rate limits to reset (typically 1 minute)",
-                        "Try with a shorter document",
-                        "Consider upgrading API plan for production use"
-                    ]
-                }
-            
-            # Create a concise summary prompt
-            full_summary_prompt = f"""Legal consultant summary:
+        summary_prompt = f"""
+Based on the following legal document analysis, create an executive summary.
 
 Analysis: {json.dumps(analysis_result, indent=2)[:1000]}...
 
-Provide JSON with executive_summary, key_findings (5 items), next_steps (5 items)."""
-
-            response = self.client.generate_content(
-                full_summary_prompt,
-                generation_config={
-                    'temperature': 0.2,
-                    'max_output_tokens': 800,  # Reduced for rate limits
-                }
-            )
+Provide JSON with:
+- executive_summary: 2-3 paragraph summary
+- key_findings: Array of 5 key findings
+- next_steps: Array of 5 recommended actions
+"""
+        
+        try:
+            if self.provider == "google":
+                client = genai.GenerativeModel(self.model)
+                response = client.generate_content(summary_prompt, generation_config={'temperature': 0.2, 'max_output_tokens': 800})
+                response_text = response.text.strip()
+            elif self.provider == "openai":
+                client = self.clients.get("openai")
+                response = client.chat.completions.create(
+                    model=self.model,
+                    messages=[{"role": "user", "content": summary_prompt}],
+                    temperature=0.2,
+                    max_tokens=800
+                )
+                response_text = response.choices[0].message.content.strip()
+            elif self.provider == "anthropic":
+                client = self.clients.get("anthropic")
+                response = client.messages.create(
+                    model=self.model,
+                    max_tokens=800,
+                    messages=[{"role": "user", "content": summary_prompt}]
+                )
+                response_text = response.content[0].text.strip()
             
-            response_text = response.text.strip()
             if response_text.startswith('```json'):
-                response_text = response_text.replace('```json', '').replace('```', '')
-                
-            return json.loads(response_text)
+                response_text = response_text.replace('```json', '').replace('```', '').strip()
             
-        except Exception as e:
-            # Return default summary if API call fails
+            return json.loads(response_text)
+        except:
             return {
-                "executive_summary": "Executive summary could not be generated due to processing error.",
-                "key_findings": ["Analysis completed with identified issues"],
-                "next_steps": ["Review individual issues for detailed recommendations"]
+                "executive_summary": "Summary generation unavailable.",
+                "key_findings": ["Analysis completed"],
+                "next_steps": ["Review detailed findings"]
             }
     
     def _validate_analysis_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and clean the analysis response"""
         
-        # Ensure required fields exist
         if 'issues' not in response:
             response['issues'] = []
         
-        # Validate each issue
         validated_issues = []
         for issue in response.get('issues', []):
             validated_issue = {
@@ -310,22 +383,16 @@ Provide JSON with executive_summary, key_findings (5 items), next_steps (5 items
                 'urgency': issue.get('urgency', 'Medium')
             }
             
-            # Validate risk level
             if validated_issue['risk_level'].title() not in ['High', 'Medium', 'Low']:
                 validated_issue['risk_level'] = 'Medium'
             
-            # Ensure recommendations is a list
             if not isinstance(validated_issue['recommendations'], list):
                 validated_issue['recommendations'] = [str(validated_issue['recommendations'])]
             
             validated_issues.append(validated_issue)
         
         response['issues'] = validated_issues
-        
-        # Validate overall risk score
         response['overall_risk_score'] = max(0, min(10, float(response.get('overall_risk_score', 5))))
-        
-        # Ensure other fields exist
         response['document_type'] = response.get('document_type', 'Unknown')
         response['compliance_flags'] = response.get('compliance_flags', [])
         response['positive_aspects'] = response.get('positive_aspects', [])
@@ -335,41 +402,124 @@ Provide JSON with executive_summary, key_findings (5 items), next_steps (5 items
     def _create_fallback_analysis(self) -> Dict[str, Any]:
         """Create a fallback analysis when API is unavailable"""
         return {
-            "issues": [
-                {
-                    "title": "API Rate Limit Reached",
-                    "description": "The AI analysis service has reached its rate limit. This is a demonstration of how the system handles API limitations. In a production environment, you would upgrade to a paid tier for higher limits.",
-                    "category": "System",
-                    "risk_level": "Medium",
-                    "confidence": 0.9,
-                    "potential_impact": "Analysis cannot be completed at this time due to API limitations",
-                    "recommendations": [
-                        "Wait for rate limits to reset (typically 1 minute for free tier)",
-                        "Consider upgrading to a paid API plan for higher rate limits",
-                        "Use shorter documents to reduce token usage",
-                        "Try again later when quotas have reset"
-                    ],
-                    "legal_citation": "Not applicable - technical limitation",
-                    "urgency": "Low"
-                },
-                {
-                    "title": "Document Analysis Demonstration",
-                    "description": "This is a sample analysis result showing how the system would categorize and present legal issues when the AI service is available.",
-                    "category": "General",
-                    "risk_level": "Low",
-                    "confidence": 0.8,
-                    "potential_impact": "This is for demonstration purposes only",
-                    "recommendations": [
-                        "Upload a shorter document to test within rate limits",
-                        "Try the analysis again in a few minutes",
-                        "Consider using Quick analysis mode to reduce token usage"
-                    ],
-                    "legal_citation": "Demonstration only",
-                    "urgency": "Low"
-                }
-            ],
+            "issues": [{
+                "title": "API Unavailable",
+                "description": f"The {self.provider} API is currently unavailable. Please check your API key configuration.",
+                "category": "System",
+                "risk_level": "Medium",
+                "confidence": 0.9,
+                "potential_impact": "Analysis cannot be completed",
+                "recommendations": ["Verify API key", "Check rate limits", "Try different model"],
+                "legal_citation": "N/A",
+                "urgency": "Low"
+            }],
             "overall_risk_score": 3.0,
             "document_type": "Rate Limited Analysis",
-            "compliance_flags": ["API rate limits reached"],
-            "positive_aspects": ["System gracefully handles API limitations", "Provides clear error messaging"]
+            "compliance_flags": ["API limitations"],
+            "positive_aspects": ["System handles errors gracefully"]
         }
+
+
+class ModelComparator:
+    """Compare analysis results from multiple AI models"""
+    
+    @staticmethod
+    def compare_models(text: str, models: List[str], analysis_depth: str, focus_areas: List[str], filename: str) -> Dict[str, Any]:
+        """Run analysis with multiple models and compare results"""
+        
+        results = {}
+        comparison_metrics = {
+            "models_compared": len(models),
+            "comparison_timestamp": time.time()
+        }
+        
+        with st.spinner("Running multi-model comparison..."):
+            for model in models:
+                st.write(f"Analyzing with {LegalAnalyzer.AVAILABLE_MODELS.get(model, {}).get('name', model)}...")
+                
+                try:
+                    analyzer = LegalAnalyzer(model_name=model)
+                    result = analyzer.analyze_document(text, analysis_depth, focus_areas, filename)
+                    results[model] = result
+                except Exception as e:
+                    st.error(f"Error with {model}: {str(e)}")
+                    results[model] = {"error": str(e)}
+        
+        # Calculate comparison metrics
+        comparison_metrics["accuracy_scores"] = ModelComparator._calculate_accuracy_scores(results)
+        comparison_metrics["consensus_issues"] = ModelComparator._find_consensus_issues(results)
+        comparison_metrics["performance_comparison"] = ModelComparator._compare_performance(results)
+        
+        return {
+            "individual_results": results,
+            "comparison_metrics": comparison_metrics
+        }
+    
+    @staticmethod
+    def _calculate_accuracy_scores(results: Dict[str, Any]) -> Dict[str, float]:
+        """Calculate relative accuracy scores based on confidence and consensus"""
+        accuracy_scores = {}
+        
+        for model, result in results.items():
+            if "error" in result:
+                accuracy_scores[model] = 0.0
+                continue
+            
+            # Factors: average confidence, number of issues found, risk assessment consistency
+            avg_confidence = result.get('performance_metrics', {}).get('confidence_avg', 0)
+            issues_count = result.get('performance_metrics', {}).get('issues_found', 0)
+            risk_score = result.get('overall_risk_score', 5) / 10
+            
+            # Weighted accuracy score
+            accuracy = (avg_confidence * 0.5) + (min(issues_count / 10, 1.0) * 0.3) + (risk_score * 0.2)
+            accuracy_scores[model] = round(accuracy * 100, 2)
+        
+        return accuracy_scores
+    
+    @staticmethod
+    def _find_consensus_issues(results: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Find issues that multiple models agree on"""
+        all_issues = {}
+        
+        for model, result in results.items():
+            if "error" in result:
+                continue
+            
+            for issue in result.get('issues', []):
+                category = issue.get('category', 'Unknown')
+                risk_level = issue.get('risk_level', 'Unknown')
+                key = f"{category}_{risk_level}"
+                
+                if key not in all_issues:
+                    all_issues[key] = {
+                        "category": category,
+                        "risk_level": risk_level,
+                        "count": 0,
+                        "models": []
+                    }
+                
+                all_issues[key]["count"] += 1
+                all_issues[key]["models"].append(model)
+        
+        # Return issues found by multiple models
+        consensus = [v for v in all_issues.values() if v["count"] > 1]
+        return sorted(consensus, key=lambda x: x["count"], reverse=True)
+    
+    @staticmethod
+    def _compare_performance(results: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """Compare performance metrics across models"""
+        comparison = {}
+        
+        for model, result in results.items():
+            if "error" in result:
+                continue
+            
+            metrics = result.get('performance_metrics', {})
+            comparison[model] = {
+                "response_time": round(metrics.get('response_time', 0), 2),
+                "tokens_used": metrics.get('tokens_used', 0),
+                "issues_found": metrics.get('issues_found', 0),
+                "avg_confidence": round(metrics.get('confidence_avg', 0), 3)
+            }
+        
+        return comparison

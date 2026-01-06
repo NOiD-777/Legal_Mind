@@ -1,22 +1,28 @@
 # LegalMind - Legal Document Analysis
 
-⚖️ AI-powered legal document analysis using Google Gemini AI
+⚖️ AI-powered legal document analysis with multi-model support and comparison
 
 ## Overview
 
-LegalMind is a Streamlit-based application that performs comprehensive analysis of legal documents including contracts, agreements, and other legal texts. It uses Google's Gemini AI to identify potential issues, assess risks, and provide actionable recommendations.
+LegalMind is a Streamlit-based application that performs comprehensive analysis of legal documents including contracts, agreements, and other legal texts. It supports multiple AI models (Google Gemini, OpenAI GPT-4, Anthropic Claude) and allows you to compare their performance and accuracy.
 
 ## Features
 
+- 🤖 **Multi-Model Support**: Choose from Gemini, GPT-4o, or Claude models
+- 📊 **Model Comparison**: Run analysis with multiple models simultaneously
+- 📈 **Accuracy Scoring**: See performance metrics and confidence levels for each model
 - 📄 **Multi-format Support**: Analyze PDF, DOCX, and TXT documents
 - 🔍 **Deep Analysis**: Identifies legal issues across multiple categories
 - ⚠️ **Risk Assessment**: Severity scoring and confidence ratings
-- 📊 **Visual Reports**: Interactive charts and comprehensive PDF reports
+- 📊 **Visual Reports**: Interactive charts and comprehensive comparisons
 - 🎯 **Smart Recommendations**: Actionable suggestions for each identified issue
 
 ## Setup
 
-### Prerequisites
+##At least one AI API key:
+  - Google Gemini (free tier available)
+  - OpenAI GPT-4 (optional)
+  - Anthropic Claude (optional)
 
 - Python 3.11 or higher
 - Google Gemini API key
@@ -33,37 +39,87 @@ cd legal
 ```bash
 pip install -e .
 ```
+ (already created)
 
-### Configuration
-
-1. Create a `.env` file in the project root:
-```bash
-cp .env.example .env
+2. Add your AI API keys to `.env`:
 ```
+# Required - Google Gemini (free tier available)
+GEMINI_API_KEY=your_gemini_key_here
 
-2. Add your Google Gemini API key to `.env`:
-```
-GEMINI_API_KEY=your_api_key_here
+# Optional - for model comparison features
+OPENAI_API_KEY=your_openai_key_here
+ANTHROPIC_API_KEY=your_anthropic_key_here
 ```
 
 **Important**: Never commit your `.env` file to version control. It's already listed in `.gitignore`.
 
-### Getting a Gemini API Key
+### Getting API Keys
 
+**Google Gemini** (Free tier available):
 1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Sign in with your Google account
 3. Create a new API key
-4. Copy the key to your `.env` file
 
-## Usage
+**OpenAI GPT-4** (Optional, for comparison):
+1. Visit [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Create an account and add billing
+3. Generate a new API key
 
-Run the Streamlit application:
-```bash
-streamlit run app.py
+**Anthropic Claude** (Optional, for comparison):
+1. Visit [Anthropic Console](https://console.anthropic.com/)
+2. Create an account
+3. Generate an API key/makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Create a new API key
+   - **Single Model**: Use one AI model for analysis
+   - **Compare Models**: Run analysis with multiple models and compare results
+3. **Select AI Model(s)**:
+   - Gemini 2.0 Flash (free, fast)
+   - Gemini 1.5 Pro (advanced)
+   - GPT-4o (powerful, requires API key)
+   - GPT-4o Mini (efficient)
+   - Claude 3.5 Sonnet (advanced reasoning)
+   - Claude 3.5 Haiku (fast)
+4. **Choose Analysis Depth**:
+   - Quick Mode: Faster analysis with focused insights
+   - Comprehensive Mode: Detailed analysis with full findings
+   - Focused Mode: Specific legal area analysis with multi-model support
+├── legal_analyzer.py         # Multi-model AI analysis engine with comparison
+├── document_processor.py     # Document parsing and processing
+├── report_generator.py       # PDF report generation
+├── utils.py                  # Utility functions
+├── pyproject.toml           # Project dependencies
+├── .env                     # Environment variables (not in git)
+├── .gitignore              # Git ignore rules
+└── README.md               # This file
 ```
 
-The application will open in your default web browser at `http://localhost:8501`.
+## AI Models
 
+The application supports the following models:
+
+| Model | Provider | Speed | Cost | Best For |
+|-------|----------|-------|------|----------|
+| Gemini 2.0 Flash | Google | ⚡⚡⚡ | Free | Quick analysis, testing |
+| Gemini 1.5 Pro | Google | ⚡⚡ | Low | Detailed analysis |
+| GPT-4o | OpenAI | ⚡⚡ | Medium | Comprehensive insights |
+| GPT-4o Mini | OpenAI | ⚡⚡⚡ | Low | Fast, cost-effective |
+| Claude 3.5 Sonnet | Anthropic | ⚡⚡ | Medium | Complex reasoning |
+| Claude 3.5 Haiku | Anthropic | ⚡⚡⚡ | Low | Quick turnaround |
+
+## Model Comparison Features
+
+When using comparison mode, you get:
+
+- **Accuracy Scores**: Calculated based on confidence levels and consistency
+- **Consensus Issues**: Issues identified by multiple models
+- **Performance Metrics**: Response time, token usage, and efficiency
+- **Side-by-Side Results**: Compare findings from each model
+
+The application will open in your default web browser at `http://localhost:8501`.
+openai` - OpenAI GPT models
+- `anthropic` - Anthropic Claude models
+- `
 ### Analysis Workflow
 
 1. **Upload Document**: Select a legal document (PDF, DOCX, or TXT)
