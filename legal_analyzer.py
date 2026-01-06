@@ -13,7 +13,7 @@ class LegalAnalyzer:
         self.model = "gemini-2.0-flash-lite"
         
         # Initialize Gemini client
-        api_key = ("AIzaSyCYUu_7VJw8yfgsTCvcxD5Jxt8KK_tEQ38")
+        api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             st.error("Gemini API key not found. Please set the GEMINI_API_KEY environment variable.")
             st.stop()

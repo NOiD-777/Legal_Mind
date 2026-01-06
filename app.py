@@ -6,10 +6,14 @@ from datetime import datetime
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from dotenv import load_dotenv
 from document_processor import DocumentProcessor
 from legal_analyzer import LegalAnalyzer
 from report_generator import ReportGenerator
 from utils import validate_file, format_confidence_score
+
+# Load environment variables
+load_dotenv()
 
 # Configure page
 st.set_page_config(
