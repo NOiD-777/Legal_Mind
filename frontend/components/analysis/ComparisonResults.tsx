@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { BarChart, Bar, LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { TrendingUp, Zap, Eye, Sparkles, ArrowRight } from 'lucide-react'
 import type { ComparisonResult } from '@/types'
 
@@ -35,7 +35,8 @@ export default function ComparisonResults({ result }: { result: ComparisonResult
       : 0
   })) || [];
 
-  const useRadar = confidenceData.length >= 3;
+  // Color palette for pie chart
+  const COLORS = ['#a855f7', '#ec4899', '#06b6d4', '#f59e0b', '#10b981'];
 
   return (
     <motion.div
@@ -149,34 +150,27 @@ export default function ComparisonResults({ result }: { result: ComparisonResult
           Model Confidence Levels
         </h3>
         <ResponsiveContainer width="100%" height={450}>
-          {useRadar ? (
-            <RadarChart data={confidenceData} margin={{ top: 20, right: 80, bottom: 20, left: 80 }}>
-              <PolarGrid stroke="#334155" />
-              <PolarAngleAxis 
-                dataKey="model" 
-                stroke="#94a3b8" 
-                tick={{ fill: '#94a3b8', fontSize: 10 }}
-              />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} stroke="#94a3b8" />
-              <Radar name="Confidence %" dataKey="confidence" stroke="#a855f7" fill="#a855f7" fillOpacity={0.6} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
-                formatter={(value: any) => [`${value.toFixed(1)}%`, 'Confidence']}
-              />
-              <Legend />
-            </RadarChart>
-          ) : (
-            <BarChart data={confidenceData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="model" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-              <YAxis domain={[0, 100]} stroke="#94a3b8" />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
-                formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Confidence']}
-              />
-              <Bar dataKey="confidence" fill="#a855f7" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          )}
+          <PieChart>
+            <Pie
+              data={confidenceData}
+              dataKey="confidence"
+              nameKey="model"
+              cx="50%"
+              cy="50%"
+              outerRadius={120}
+              label={({ model, confidence }) => `${model}: ${confidence.toFixed(1)}%`}
+              labelLine={true}
+            >
+              {confidenceData.map((entry: any, index: number) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip 
+              contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
+              formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Confidence']}
+            />
+            <Legend />
+          </PieChart>
         </ResponsiveContainer>
       </motion.div>
 

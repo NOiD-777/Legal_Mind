@@ -404,16 +404,15 @@ def display_comparison_results():
                 )
                 st.plotly_chart(fig_tokens, use_container_width=True)
                 
-                # Confidence chart
-                fig_conf = px.bar(
+                # Confidence chart (Pie chart)
+                fig_conf = px.pie(
                     df_perf,
-                    x='Model',
-                    y='Avg Confidence',
-                    title="Average Confidence",
-                    color='Avg Confidence',
-                    color_continuous_scale='Greens'
+                    names='Model',
+                    values='Avg Confidence',
+                    title="Average Confidence Distribution",
+                    color_discrete_sequence=px.colors.sequential.Greens_r
                 )
-                fig_conf.update_layout(yaxis_range=[0, 1])
+                fig_conf.update_traces(textposition='inside', textinfo='percent+label')
                 st.plotly_chart(fig_conf, use_container_width=True)
             
             # Performance summary table
