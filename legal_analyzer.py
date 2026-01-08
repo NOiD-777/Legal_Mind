@@ -25,10 +25,9 @@ class LegalAnalyzer:
         "gemini-2.5-flash-lite": {"provider": "google", "name": "Gemini 2.5 Flash Lite", "cost": "free"},
         "gemini-2.5-pro": {"provider": "google", "name": "Gemini 2.5 Pro", "cost": "medium"},
 
-        # OpenAI (latest 5.2 family)
-        "gpt-5.2": {"provider": "openai", "name": "GPT-5.2", "cost": "medium"},
-        "gpt-5.2-mini": {"provider": "openai", "name": "GPT-5.2 Mini", "cost": "low"},
-        "gpt-5.2-nano": {"provider": "openai", "name": "GPT-5.2 Nano", "cost": "low"},
+        # OpenAI (4o family)
+        "gpt-4o": {"provider": "openai", "name": "GPT-4o", "cost": "medium"},
+        "gpt-4o-mini": {"provider": "openai", "name": "GPT-4o Mini", "cost": "low"},
 
         # Anthropic (3.5 family)
         "claude-3-5-sonnet-20241022": {"provider": "anthropic", "name": "Claude 3.5 Sonnet", "cost": "medium"},
