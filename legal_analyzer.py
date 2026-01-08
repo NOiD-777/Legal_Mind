@@ -30,10 +30,9 @@ class LegalAnalyzer:
         "gpt-5.2-mini": {"provider": "openai", "name": "GPT-5.2 Mini", "cost": "low"},
         "gpt-5.2-nano": {"provider": "openai", "name": "GPT-5.2 Nano", "cost": "low"},
 
-        # Anthropic (4.5 family)
-        "claude-4.5-sonnet": {"provider": "anthropic", "name": "Claude 4.5 Sonnet", "cost": "medium"},
-        "claude-4.5-opus": {"provider": "anthropic", "name": "Claude 4.5 Opus", "cost": "high"},
-        "claude-4.5-haiku": {"provider": "anthropic", "name": "Claude 4.5 Haiku", "cost": "low"},
+        # Anthropic (3.5 family)
+        "claude-3-5-sonnet-20241022": {"provider": "anthropic", "name": "Claude 3.5 Sonnet", "cost": "medium"},
+        "claude-3-5-haiku-20241022": {"provider": "anthropic", "name": "Claude 3.5 Haiku", "cost": "low"},
 
         # Groq (popular free GroqCloud models)
         "llama-3.1-70b-versatile": {"provider": "groq", "name": "Llama 3.1 70B Versatile", "cost": "free"},
