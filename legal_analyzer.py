@@ -6,24 +6,42 @@ import google.generativeai as genai
 import streamlit as st
 from openai import OpenAI
 from anthropic import Anthropic
-from groq import Groq
+
+# Groq is optional; handle gracefully if not installed
+try:
+    from groq import Groq
+except ImportError:  # pragma: no cover - optional dependency
+    Groq = None
 
 class LegalAnalyzer:
     """Performs AI-powered legal document analysis using multiple AI models"""
     
     # Available models configuration
     AVAILABLE_MODELS = {
-        "gemini-2.0-flash-lite": {"provider": "google", "name": "Gemini 2.0 Flash", "cost": "free"},
-        "gemini-1.5-pro": {"provider": "google", "name": "Gemini 1.5 Pro", "cost": "low"},
-        "gpt-4o": {"provider": "openai", "name": "GPT-4o", "cost": "medium"},
-        "gpt-4o-mini": {"provider": "openai", "name": "GPT-4o Mini", "cost": "low"},
-        "claude-3-5-sonnet-20241022": {"provider": "anthropic", "name": "Claude 3.5 Sonnet", "cost": "medium"},
-        "claude-3-5-haiku-20241022": {"provider": "anthropic", "name": "Claude 3.5 Haiku", "cost": "low"},
+        # Google Gemini (latest previews + 2.5 family)
+        "gemini-3-pro-preview": {"provider": "google", "name": "Gemini 3 Pro (Preview)", "cost": "medium"},
+        "gemini-3-flash-preview": {"provider": "google", "name": "Gemini 3 Flash (Preview)", "cost": "low"},
+        "gemini-2.5-flash": {"provider": "google", "name": "Gemini 2.5 Flash", "cost": "low"},
+        "gemini-2.5-flash-lite": {"provider": "google", "name": "Gemini 2.5 Flash Lite", "cost": "free"},
+        "gemini-2.5-pro": {"provider": "google", "name": "Gemini 2.5 Pro", "cost": "medium"},
+
+        # OpenAI (latest 5.2 family)
+        "gpt-5.2": {"provider": "openai", "name": "GPT-5.2", "cost": "medium"},
+        "gpt-5.2-mini": {"provider": "openai", "name": "GPT-5.2 Mini", "cost": "low"},
+        "gpt-5.2-nano": {"provider": "openai", "name": "GPT-5.2 Nano", "cost": "low"},
+
+        # Anthropic (4.5 family)
+        "claude-4.5-sonnet": {"provider": "anthropic", "name": "Claude 4.5 Sonnet", "cost": "medium"},
+        "claude-4.5-opus": {"provider": "anthropic", "name": "Claude 4.5 Opus", "cost": "high"},
+        "claude-4.5-haiku": {"provider": "anthropic", "name": "Claude 4.5 Haiku", "cost": "low"},
+
+        # Groq (popular free GroqCloud models)
+        "llama-3.1-70b-versatile": {"provider": "groq", "name": "Llama 3.1 70B Versatile", "cost": "free"},
+        "llama-3.1-8b-instant": {"provider": "groq", "name": "Llama 3.1 8B Instant", "cost": "free"},
         "mixtral-8x7b-32768": {"provider": "groq", "name": "Mixtral 8x7B", "cost": "free"},
-        "llama-3.1-70b-versatile": {"provider": "groq", "name": "Llama 3.1 70B", "cost": "free"},
     }
     
-    def __init__(self, model_name: str = "gemini-2.0-flash-lite"):
+    def __init__(self, model_name: str = "gemini-3-flash-preview"):
         self.model = model_name
         self.provider = self.AVAILABLE_MODELS.get(model_name, {}).get("provider", "google")
         
@@ -75,7 +93,10 @@ class LegalAnalyzer:
         # Groq
         groq_key = os.getenv("GROQ_API_KEY")
         if groq_key:
-            self.clients["groq"] = Groq(api_key=groq_key)
+            if Groq is None:
+                st.warning("Groq SDK not installed. Run 'pip install groq' to enable Groq models.")
+            else:
+                self.clients["groq"] = Groq(api_key=groq_key)
         
         # Check if required provider is available
         if self.provider not in self.clients:
@@ -95,7 +116,7 @@ class LegalAnalyzer:
         if os.getenv("GROQ_API_KEY"):
             available.extend([k for k, v in cls.AVAILABLE_MODELS.items() if v["provider"] == "groq"])
         
-        return available if available else ["gemini-2.0-flash-lite"]
+        return available if available else ["gemini-3-flash-preview"]
     
     def analyze_document(self, text: str, analysis_depth: str, focus_areas: List[str], filename: str) -> Dict[str, Any]:
         """
