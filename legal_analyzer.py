@@ -4,7 +4,6 @@ import time
 from typing import List, Dict, Any, Optional
 import google.generativeai as genai
 import streamlit as st
-from openai import OpenAI
 from anthropic import Anthropic
 
 # Groq is optional; handle gracefully if not installed
@@ -24,10 +23,6 @@ class LegalAnalyzer:
         "gemini-2.5-flash": {"provider": "google", "name": "Gemini 2.5 Flash", "cost": "low"},
         "gemini-2.5-flash-lite": {"provider": "google", "name": "Gemini 2.5 Flash Lite", "cost": "free"},
         "gemini-2.5-pro": {"provider": "google", "name": "Gemini 2.5 Pro", "cost": "medium"},
-
-        # OpenAI (4o family)
-        "gpt-4o": {"provider": "openai", "name": "GPT-4o", "cost": "medium"},
-        "gpt-4o-mini": {"provider": "openai", "name": "GPT-4o Mini", "cost": "low"},
 
         # Anthropic (3.5 family)
         "claude-3-5-sonnet-20241022": {"provider": "anthropic", "name": "Claude 3.5 Sonnet", "cost": "medium"},
@@ -78,11 +73,6 @@ class LegalAnalyzer:
             genai.configure(api_key=gemini_key)
             self.clients["google"] = genai
         
-        # OpenAI
-        openai_key = os.getenv("OPENAI_API_KEY")
-        if openai_key:
-            self.clients["openai"] = OpenAI(api_key=openai_key)
-        
         # Anthropic Claude
         anthropic_key = os.getenv("ANTHROPIC_API_KEY")
         if anthropic_key:
@@ -107,8 +97,6 @@ class LegalAnalyzer:
         
         if os.getenv("GEMINI_API_KEY"):
             available.extend([k for k, v in cls.AVAILABLE_MODELS.items() if v["provider"] == "google"])
-        if os.getenv("OPENAI_API_KEY"):
-            available.extend([k for k, v in cls.AVAILABLE_MODELS.items() if v["provider"] == "openai"])
         if os.getenv("ANTHROPIC_API_KEY"):
             available.extend([k for k, v in cls.AVAILABLE_MODELS.items() if v["provider"] == "anthropic"])
         if os.getenv("GROQ_API_KEY"):
@@ -254,8 +242,6 @@ Ensure all confidence scores are between 0.0 and 1.0, and the overall_risk_score
         
         if self.provider == "google":
             return self._call_gemini_analysis(prompt)
-        elif self.provider == "openai":
-            return self._call_openai_analysis(prompt)
         elif self.provider == "anthropic":
             return self._call_anthropic_analysis(prompt)
         elif self.provider == "groq":
@@ -282,34 +268,6 @@ Ensure all confidence scores are between 0.0 and 1.0, and the overall_risk_score
             return self._validate_analysis_response(json.loads(response_text))
         except Exception as e:
             st.warning(f"Gemini API error: {str(e)}")
-            return self._create_fallback_analysis()
-    
-    def _call_openai_analysis(self, prompt: str) -> Dict[str, Any]:
-        """Call OpenAI GPT API"""
-        try:
-            client = self.clients.get("openai")
-            if not client:
-                raise ValueError("OpenAI client not initialized")
-            
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are an expert legal analyst. Respond only with valid JSON."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.1,
-                max_tokens=2000
-            )
-            
-            self.performance_metrics["tokens_used"] = response.usage.total_tokens
-            
-            response_text = response.choices[0].message.content.strip()
-            if response_text.startswith('```json'):
-                response_text = response_text.replace('```json', '').replace('```', '').strip()
-            
-            return self._validate_analysis_response(json.loads(response_text))
-        except Exception as e:
-            st.warning(f"OpenAI API error: {str(e)}")
             return self._create_fallback_analysis()
     
     def _call_anthropic_analysis(self, prompt: str) -> Dict[str, Any]:
