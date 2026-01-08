@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
+import { Search, Scale } from 'lucide-react'
 import DocumentUpload from '@/components/analysis/DocumentUpload'
 import AnalysisResults from '@/components/analysis/AnalysisResults'
 import ComparisonResults from '@/components/analysis/ComparisonResults'
@@ -48,7 +49,7 @@ export default function AnalyzePage() {
   }
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 py-12 px-4">
+    <div ref={containerRef} className="min-h-screen bg-transparent py-12 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
@@ -60,7 +61,7 @@ export default function AnalyzePage() {
           <h1 className="text-5xl font-bold gradient-text mb-4">
             Legal Document Analysis
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+          <p className="text-xl text-white/80 max-w-2xl mx-auto">
             Upload your legal documents and get AI-powered risk assessments powered by multiple advanced models
           </p>
         </motion.div>
@@ -76,13 +77,17 @@ export default function AnalyzePage() {
             <button
               key={mode}
               onClick={() => setAnalysisMode(mode)}
-              className={`px-8 py-3 rounded-lg font-semibold transition-all ${
+              className={`px-8 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
                 analysisMode === mode
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50'
-                  : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                  ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/50'
+                  : 'bg-white/10 text-white/80 hover:bg-white/20'
               }`}
             >
-              {mode === 'single' ? '🔍 Single Model' : '⚖️ Compare Models'}
+              {mode === 'single' ? (
+                <><Search className="w-4 h-4" /> Single Model</>
+              ) : (
+                <><Scale className="w-4 h-4" /> Compare Models</>
+              )}
             </button>
           ))}
         </motion.div>
@@ -123,9 +128,9 @@ export default function AnalyzePage() {
                   transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
                   className="inline-block mb-4"
                 >
-                  <div className="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full" />
+                  <div className="w-12 h-12 border-4 border-primary-500/20 border-t-primary-500 rounded-full" />
                 </motion.div>
-                <p className="text-gray-400">Analyzing your document...</p>
+                <p className="text-white/70">Analyzing your document...</p>
               </div>
             )}
             
@@ -139,7 +144,7 @@ export default function AnalyzePage() {
             
             {!results && !loading && !error && (
               <div className="glass rounded-2xl p-12 text-center">
-                <p className="text-gray-400">Upload a document to see results here</p>
+                <p className="text-white/70">Upload a document to see results here</p>
               </div>
             )}
           </motion.div>

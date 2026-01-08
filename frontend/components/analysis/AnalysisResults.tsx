@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { AlertCircle, TrendingUp, Eye } from 'lucide-react'
+import { AlertCircle, TrendingUp, Eye, CheckCircle, ArrowRight } from 'lucide-react'
 import type { AnalysisResult } from '@/types'
 
 interface IssueDetailProps {
@@ -30,7 +30,7 @@ function IssueDetail({ issue, index }: IssueDetailProps) {
       case 'high': return 'text-red-400 bg-red-500/10 border-red-500/30'
       case 'medium': return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30'
       case 'low': return 'text-green-400 bg-green-500/10 border-green-500/30'
-      default: return 'text-blue-400 bg-blue-500/10 border-blue-500/30'
+      default: return 'text-primary-400 bg-primary-500/10 border-primary-500/30'
     }
   }
 
@@ -44,21 +44,21 @@ function IssueDetail({ issue, index }: IssueDetailProps) {
         <AlertCircle className="w-5 h-5 flex-shrink-0 mt-1" />
         <div className="flex-1">
           <h4 className="font-semibold text-white mb-1">{issue.title}</h4>
-          <p className="text-sm text-gray-400 mb-3">{issue.description}</p>
+          <p className="text-sm text-white/70 mb-3">{issue.description}</p>
           <div className="flex flex-wrap gap-2 mb-3">
-            <span className="px-2 py-1 rounded bg-white/10 text-xs text-gray-300">
+            <span className="px-2 py-1 rounded bg-white/10 text-xs text-white/80">
               {issue.category}
             </span>
-            <span className="px-2 py-1 rounded bg-white/10 text-xs text-gray-300">
+            <span className="px-2 py-1 rounded bg-white/10 text-xs text-white/80">
               Confidence: {(issue.confidence * 100).toFixed(0)}%
             </span>
           </div>
           {issue.recommendations && (
             <div>
-              <p className="text-xs font-semibold text-gray-400 mb-2">Recommendations:</p>
+              <p className="text-xs font-semibold text-white/70 mb-2">Recommendations:</p>
               <ul className="space-y-1">
                 {issue.recommendations.map((rec: string, i: number) => (
-                  <li key={i} className="text-xs text-gray-400 flex gap-2">
+                  <li key={i} className="text-xs text-white/70 flex gap-2">
                     <span>•</span>
                     <span>{rec}</span>
                   </li>
@@ -113,7 +113,7 @@ export default function AnalysisResults({ result }: { result: AnalysisResult }) 
           whileHover={{ y: -5 }}
           className="glass rounded-xl p-6 border border-white/10"
         >
-          <p className="text-sm text-gray-400 mb-2">Overall Risk Score</p>
+          <p className="text-sm text-white/70 mb-2">Overall Risk Score</p>
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -122,7 +122,7 @@ export default function AnalysisResults({ result }: { result: AnalysisResult }) 
           >
             {result.overall_risk_score.toFixed(1)}/10
           </motion.div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-white/60">
             {result.issues?.length || 0} issues identified
           </p>
         </motion.div>
@@ -131,7 +131,7 @@ export default function AnalysisResults({ result }: { result: AnalysisResult }) 
           whileHover={{ y: -5 }}
           className="glass rounded-xl p-6 border border-white/10"
         >
-          <p className="text-sm text-gray-400 mb-2">Document Type</p>
+          <p className="text-sm text-white/70 mb-2">Document Type</p>
           <p className="text-xl font-semibold text-white">{result.document_type || 'Unknown'}</p>
         </motion.div>
 
@@ -139,7 +139,7 @@ export default function AnalysisResults({ result }: { result: AnalysisResult }) 
           whileHover={{ y: -5 }}
           className="glass rounded-xl p-6 border border-white/10"
         >
-          <p className="text-sm text-gray-400 mb-2">Avg Confidence</p>
+          <p className="text-sm text-white/70 mb-2">Avg Confidence</p>
           <p className="text-xl font-semibold text-white">
             {result.issues && result.issues.length > 0
               ? ((result.issues.reduce((sum: number, i: any) => sum + (i.confidence || 0), 0) / result.issues.length) * 100).toFixed(0)
@@ -167,7 +167,7 @@ export default function AnalysisResults({ result }: { result: AnalysisResult }) 
               <XAxis dataKey="name" stroke="#94a3b8" />
               <YAxis stroke="#94a3b8" />
               <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }} />
-              <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="value" fill="#a855f7" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </motion.div>
@@ -185,9 +185,9 @@ export default function AnalysisResults({ result }: { result: AnalysisResult }) 
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie data={riskLevelData} cx="50%" cy="50%" labelLine={false} label outerRadius={80} fill="#8884d8" dataKey="value">
+              <Pie data={riskLevelData} cx="50%" cy="50%" labelLine={false} label outerRadius={80} fill="#a855f7" dataKey="value">
                 {riskLevelData.map((entry: any, index: number) => (
-                  <Cell key={`cell-${index}`} fill={(colors as any)[entry.name] || '#3b82f6'} />
+                  <Cell key={`cell-${index}`} fill={(colors as any)[entry.name] || '#a855f7'} />
                 ))}
               </Pie>
               <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }} />
@@ -205,7 +205,7 @@ export default function AnalysisResults({ result }: { result: AnalysisResult }) 
               <IssueDetail key={i} issue={issue} index={i} />
             ))
           ) : (
-            <p className="text-gray-400">No issues identified</p>
+            <p className="text-white/70">No issues identified</p>
           )}
         </div>
       </div>
@@ -217,11 +217,14 @@ export default function AnalysisResults({ result }: { result: AnalysisResult }) 
           animate={{ opacity: 1, y: 0 }}
           className="glass rounded-xl p-6 border border-green-500/30 bg-green-500/5"
         >
-          <h3 className="font-semibold text-green-400 mb-3">✅ Positive Aspects</h3>
+          <h3 className="font-semibold text-green-400 mb-3 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            Positive Aspects
+          </h3>
           <ul className="space-y-2">
             {result.positive_aspects.map((aspect: string, i: number) => (
-              <li key={i} className="text-sm text-gray-300 flex gap-2">
-                <span>→</span>
+              <li key={i} className="text-sm text-white/80 flex items-start gap-2">
+                <ArrowRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <span>{aspect}</span>
               </li>
             ))}

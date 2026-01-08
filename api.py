@@ -62,6 +62,15 @@ async def get_models():
         "model_details": {m: LegalAnalyzer.AVAILABLE_MODELS[m] for m in available}
     }
 
+@app.get("/models/working")
+async def get_working_models():
+    """Get models that pass a quick health check"""
+    working = LegalAnalyzer.get_working_models()
+    return {
+        "models": working,
+        "model_details": {m: LegalAnalyzer.AVAILABLE_MODELS[m] for m in working}
+    }
+
 @app.post("/analyze")
 async def analyze(
     file: UploadFile = File(...),
@@ -86,8 +95,18 @@ async def analyze(
             tmp_path = tmp.name
 
         try:
-            # Process document
-            text = processor.process_file(tmp_path, file.filename or "document")
+            # Determine MIME type from file extension and extract text
+            ext = os.path.splitext(file.filename or "")[1].lower()
+            mime_map = {
+                ".pdf": "application/pdf",
+                ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".txt": "text/plain",
+            }
+            mime_type = mime_map.get(ext, "text/plain")
+
+            text = processor.extract_text(tmp_path, mime_type)
+            if not text:
+                return JSONResponse(status_code=400, content={"error": "Could not extract text from the uploaded file."})
             
             # Analyze
             analyzer = LegalAnalyzer(model)
@@ -140,22 +159,46 @@ async def compare(
             tmp_path = tmp.name
 
         try:
-            # Process
-            text = processor.process_file(tmp_path, file.filename or "document")
+            # Determine MIME type from file extension and extract text
+            ext = os.path.splitext(file.filename or "")[1].lower()
+            mime_map = {
+                ".pdf": "application/pdf",
+                ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".txt": "text/plain",
+            }
+            mime_type = mime_map.get(ext, "text/plain")
+
+            text = processor.extract_text(tmp_path, mime_type)
+            if not text:
+                return JSONResponse(status_code=400, content={"error": "Could not extract text from the uploaded file."})
             
             # Compare
             import time
             start_time = time.time()
-            result = ModelComparator.compare_models(
-                text,
-                model_list,
-                analysis_depth,
-                areas,
-                file.filename or "document"
-            )
-            result['response_time'] = time.time() - start_time
             
-            return result
+            # Run analysis with each model
+            model_results = []
+            for model in model_list:
+                try:
+                    analyzer = LegalAnalyzer(model)
+                    result = analyzer.analyze_document(text, analysis_depth, areas, file.filename or "document")
+                    result['model_name'] = model
+                    model_results.append(result)
+                except Exception as e:
+                    # Include error in results but continue with other models
+                    model_results.append({
+                        'model_name': model,
+                        'error': str(e),
+                        'issues': [],
+                        'overall_risk_score': 0
+                    })
+            
+            comparison_result = {
+                'model_results': model_results,
+                'response_time': time.time() - start_time
+            }
+            
+            return comparison_result
         finally:
             os.unlink(tmp_path)
 

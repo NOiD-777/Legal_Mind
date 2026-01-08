@@ -42,4 +42,19 @@ export const compareModels = async (
   return response.data
 }
 
+export interface ModelsResponse {
+  models: string[]
+  model_details: Record<string, { provider: string; name: string; cost: string }>
+}
+
+export const getAvailableModels = async (): Promise<ModelsResponse> => {
+  const response = await api.get('/models', { headers: { 'Content-Type': 'application/json' } })
+  return response.data
+}
+
+export const getWorkingModels = async (): Promise<ModelsResponse> => {
+  const response = await api.get('/models/working', { headers: { 'Content-Type': 'application/json' } })
+  return response.data
+}
+
 export default api

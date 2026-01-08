@@ -29,9 +29,7 @@ class LegalAnalyzer:
         "claude-3-5-haiku-20241022": {"provider": "anthropic", "name": "Claude 3.5 Haiku", "cost": "low"},
 
         # Groq (popular free GroqCloud models)
-        "llama-3.1-70b-versatile": {"provider": "groq", "name": "Llama 3.1 70B Versatile", "cost": "free"},
         "llama-3.1-8b-instant": {"provider": "groq", "name": "Llama 3.1 8B Instant", "cost": "free"},
-        "mixtral-8x7b-32768": {"provider": "groq", "name": "Mixtral 8x7B", "cost": "free"},
     }
     
     def __init__(self, model_name: str = "gemini-3-flash-preview"):
@@ -103,6 +101,43 @@ class LegalAnalyzer:
             available.extend([k for k, v in cls.AVAILABLE_MODELS.items() if v["provider"] == "groq"])
         
         return available if available else ["gemini-3-flash-preview"]
+
+    @classmethod
+    def get_working_models(cls) -> List[str]:
+        """Return models that appear to be working via a quick ping check."""
+        working: List[str] = []
+        for model in cls.get_available_models():
+            try:
+                analyzer = cls(model_name=model)
+                if analyzer.quick_check():
+                    working.append(model)
+            except Exception:
+                # Model considered not working if any exception occurs
+                continue
+        return working if working else cls.get_available_models()
+
+    def quick_check(self) -> bool:
+        """Perform a minimal provider-specific API call to verify the model responds."""
+        try:
+            if self.provider == "google":
+                model = self.clients.get("google").GenerativeModel(self.model)  # type: ignore[attr-defined]
+                resp = model.generate_content("ok", generation_config={'max_output_tokens': 1})
+                return bool(getattr(resp, 'text', None) is not None or hasattr(resp, 'candidates'))
+            if self.provider == "anthropic":
+                client = self.clients.get("anthropic")
+                if not client:
+                    return False
+                _ = client.messages.create(model=self.model, max_tokens=1, messages=[{"role": "user", "content": "ok"}])
+                return True
+            if self.provider == "groq":
+                client = self.clients.get("groq")
+                if not client:
+                    return False
+                _ = client.chat.completions.create(model=self.model, messages=[{"role": "user", "content": "ok"}], max_tokens=1)
+                return True
+            return False
+        except Exception:
+            return False
     
     def analyze_document(self, text: str, analysis_depth: str, focus_areas: List[str], filename: str) -> Dict[str, Any]:
         """

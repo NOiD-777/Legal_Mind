@@ -13,24 +13,21 @@ export default function Navbar() {
   useEffect(() => setMounted(true), [])
 
   return (
-    <nav className="sticky top-0 z-50 glass border-b border-white/10">
+    <nav className="sticky top-0 z-50 bg-black border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group">
           <motion.div
             whileHover={{ scale: 1.1, rotate: 10 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Scale className="w-8 h-8 text-blue-500 group-hover:text-blue-400 transition-colors" />
+            <Scale className="w-8 h-8 text-primary-500 group-hover:text-primary-400 transition-colors" />
           </motion.div>
           <span className="text-xl font-bold gradient-text">LegalMind</span>
         </Link>
 
         <div className="flex items-center gap-8">
-          <Link href="/analyze" className="text-gray-300 hover:text-white transition-colors">
+          <Link href="/analyze" className="text-white/80 hover:text-white transition-colors">
             Analyze
-          </Link>
-          <Link href="/docs" className="text-gray-300 hover:text-white transition-colors">
-            Documentation
           </Link>
 
           {mounted && (

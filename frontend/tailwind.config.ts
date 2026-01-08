@@ -9,13 +9,26 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-manrope)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-sora)', 'ui-sans-serif', 'system-ui'],
       },
       colors: {
         'slate': {
           '50': '#f8fafc',
           '900': '#0f172a',
-        }
+        },
+        primary: {
+          50: '#faf5ff',
+          100: '#f3e8ff',
+          200: '#e9d5ff',
+          300: '#d8b4fe',
+          400: '#c084fc',
+          500: '#a855f7',
+          600: '#9333ea',
+          700: '#7e22ce',
+          800: '#6b21a8',
+          900: '#581c87',
+        },
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

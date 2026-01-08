@@ -1,6 +1,124 @@
-# LegalMind - Legal Document Analysis
+# LegalMind — AI Legal Document Analysis (FastAPI + Next.js)
 
-⚖️ AI-powered legal document analysis with multi-model support and comparison
+AI-powered legal document risk assessment with multi-model analysis and comparisons.
+
+Backend: [api.py](api.py) • Frontend: [frontend/](frontend)
+
+Ports: frontend 3000, backend 8000.
+
+---
+
+**Quick Start**
+
+```bash
+# 1) Clone
+git clone <your-repo-url>
+cd legal
+
+# 2) .env at repo root (create if needed)
+#   – at least one provider key (Gemini, Claude, or Groq)
+
+# 3) Python 3.11 venv + backend deps (macOS/Linux)
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -U pip wheel setuptools
+pip install anthropic docx google-generativeai groq pandas pdfplumber plotly pypdf2 python-docx python-dotenv streamlit fastapi uvicorn python-multipart
+
+# 4) Frontend deps
+cd frontend
+npm install
+
+# 5) Run
+npm run dev            # Next.js at :3000
+# new terminal (activate venv)
+cd ..
+uvicorn api:app --reload --port 8000
+```
+
+Open http://localhost:3000 (Analyze page at /analyze).
+
+---
+
+**Environment Variables**
+- Place these in a `.env` at the repo root (same folder as [api.py](api.py)). At least one provider key is required.
+- `GEMINI_API_KEY` (Google Gemini — recommended, free tier available)
+- `ANTHROPIC_API_KEY` (Anthropic Claude — optional)
+- `GROQ_API_KEY` (Groq — optional)
+- `NEXT_PUBLIC_API_URL` (frontend → backend base URL; defaults to `http://localhost:8000`)
+
+Example:
+
+```
+GEMINI_API_KEY=your_gemini_key_here
+# Optional
+ANTHROPIC_API_KEY=your_anthropic_key_here
+GROQ_API_KEY=your_groq_key_here
+
+# Frontend → Backend (optional override)
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+---
+
+**How To Run**
+- Backend (FastAPI):
+
+```bash
+source .venv/bin/activate
+uvicorn api:app --reload --port 8000
+```
+
+- Frontend (Next.js):
+
+```bash
+cd frontend
+npm run dev
+```
+
+---
+
+**Using The App**
+- Upload PDF/DOCX/TXT on the Analyze page
+- Choose Single or Compare mode
+- Models will only display if they’re healthy (see Model Availability)
+- Pick focus areas and analysis depth; run and review charts/insights
+
+---
+
+**Model Availability**
+- Frontend calls `/models/working` to show only healthy models
+- Falls back to `/models` if the working endpoint isn’t available
+
+---
+
+**API Endpoints**
+- `GET /health` — API health
+- `GET /models` — models based on configured keys
+- `GET /models/working` — models passing a quick provider check
+- `POST /analyze` — single-model analysis
+   - form-data: `file`, `analysis_depth`, `focus_areas` (JSON), `model`
+- `POST /compare` — multi-model comparison
+   - form-data: `file`, `analysis_depth`, `focus_areas` (JSON), `models` (JSON array)
+
+---
+
+**Project Structure**
+- Backend (root): [api.py](api.py), [legal_analyzer.py](legal_analyzer.py), [document_processor.py](document_processor.py), [report_generator.py](report_generator.py), [utils.py](utils.py), [pyproject.toml](pyproject.toml)
+- Frontend (Next.js): [frontend/app/analyze/page.tsx](frontend/app/analyze/page.tsx), [frontend/components/analysis](frontend/components/analysis), [frontend/services/api.ts](frontend/services/api.ts), [frontend/app/globals.css](frontend/app/globals.css)
+
+---
+
+**Troubleshooting**
+- Port busy: free 8000 → `lsof -ti:8000 | xargs kill -9`; use a different port as needed
+- Empty model list: ensure `.env` has at least one API key; restart backend
+- CORS/API URL: set `NEXT_PUBLIC_API_URL` to your backend if not default
+- Python: requires ≥ 3.11 (see [pyproject.toml](pyproject.toml))
+
+---
+
+**Security & Privacy**
+- API keys are read from `.env` and never committed
+- Uploaded files are processed from a temp path and deleted afterward
 
 ## Overview
 

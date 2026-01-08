@@ -6,13 +6,13 @@ import { ArrowRight, Zap, BarChart3, Shield } from 'lucide-react'
 
 export default function Hero() {
   return (
-    <section className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 relative overflow-hidden">
+    <section className="min-h-screen bg-transparent relative overflow-hidden">
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-          className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"
+          className="absolute -top-40 -right-40 w-80 h-80 bg-primary-500/10 rounded-full blur-3xl"
         />
         <motion.div
           animate={{ rotate: -360 }}
@@ -32,7 +32,7 @@ export default function Hero() {
           <h1 className="text-6xl md:text-7xl font-bold mb-6 gradient-text">
             Legal Intelligence
           </h1>
-          <p className="text-xl md:text-2xl text-gray-300 mb-8">
+          <p className="text-xl md:text-2xl text-white/80 mb-8">
             AI-powered risk assessment for legal documents. Analyze contracts, terms, and agreements with multiple advanced AI models in seconds.
           </p>
 
@@ -46,19 +46,12 @@ export default function Hero() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg hover:shadow-blue-500/50 transition-all"
+                className="px-8 py-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg hover:shadow-primary-500/50 transition-all"
               >
                 Get Started
                 <ArrowRight className="w-5 h-5" />
               </motion.button>
             </Link>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-8 py-4 bg-white/10 text-white rounded-lg font-semibold hover:bg-white/20 transition-all"
-            >
-              Learn More
-            </motion.button>
           </motion.div>
 
           {/* Features Grid */}
@@ -78,9 +71,9 @@ export default function Hero() {
                 whileHover={{ y: -5 }}
                 className="glass rounded-xl p-6 border border-white/10"
               >
-                <feature.icon className="w-8 h-8 text-blue-400 mb-4" />
+                <feature.icon className="w-8 h-8 text-primary-400 mb-4" />
                 <h3 className="font-semibold text-white mb-2">{feature.title}</h3>
-                <p className="text-sm text-gray-400">{feature.desc}</p>
+                <p className="text-sm text-white/70">{feature.desc}</p>
               </motion.div>
             ))}
           </motion.div>
